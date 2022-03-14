@@ -10,8 +10,8 @@ For Microsoft Sentinel to access OpenCTI TAXII feeds, a proxy needs to sit in fr
 The opencti.conf file (get the bearer token from opencti profile page)
 ```
 server {
-	listen 8001 default_server;
-	listen [::]:8001 default_server;
+	listen 8090 default_server;
+	listen [::]:8090 default_server;
 
 	location / {
 		proxy_pass http://localhost:8080;

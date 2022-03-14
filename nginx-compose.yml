@@ -5,3 +5,5 @@ services:
     restart: always
     volumes:
       - nginxconfig:/etc/nginx/conf.d/
+    ports:
+      - "8090:8090"
