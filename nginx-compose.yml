@@ -1,9 +1,0 @@
-version: '3'
-services:
-  redis:
-    image: nginx:stable
-    restart: always
-    volumes:
-      - nginxconfig:/etc/nginx/conf.d/
-    ports:
-      - "8090:8090"
