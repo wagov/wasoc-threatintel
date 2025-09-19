@@ -1,0 +1,99 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "workspace": {
+            "type": "String"
+        },
+	"ruleId": {
+      "type": "string",
+      "defaultValue": "[newGuid()]",
+      "metadata": {
+        "description": "The unique guid for this Analytics Rule"
+        }
+    }
+    },
+    "resources": [
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/', parameters('ruleId'))]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/', parameters('ruleId'))]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "Scheduled",
+            "apiVersion": "2023-12-01-preview",
+            "properties": {
+                "displayName": "[WASOC-Intelligence] Observed OfficeActivity from known malicious IP address related to phishing",
+                "description": "The rules maps potential threat actor activities in OfficeActivity from known malicious IP address related to phishing campaign.",
+                "severity": "High",
+                "enabled": true,
+                "query": "//WASOC-Intelligence phishing-005\nlet dt_lookBack = 1h; // Look back 1 hour for OfficeActivity events\nlet ioc_lookBack = 14d; // Look back 14 days for threat intelligence indicators\nlet OfficeActivity_ = materialize(OfficeActivity\n  | where isnotempty(ClientIP)\n  | where TimeGenerated >= ago(dt_lookBack)\n  | extend ClientIPValues = extract_all(@'\\[?(::ffff:)?(?P<IPAddress>(\\d+\\.\\d+\\.\\d+\\.\\d+)|[^\\]%]+)(%\\d+)?\\]?([-:](?P<Port>\\d+))?', dynamic([\"IPAddress\", \"Port\"]), ClientIP)[0]\n  | extend IPAddress = iff(array_length(ClientIPValues) > 0, tostring(ClientIPValues[0]), '')\n  | project-rename OfficeActivity_TimeGenerated = TimeGenerated);\nlet IP_Indicators = materialize(ThreatIntelIndicators\n//extract key part of kv pair\n     | extend IndicatorType = replace(@\"\\[|\\]|\\\"\"\", \"\", tostring(split(ObservableKey, \":\", 0)))\n     | where IndicatorType in (\"ipv4-addr\", \"ipv6-addr\", \"network-traffic\")\n     | extend NetworkSourceIP = toupper(ObservableValue)\n     | extend TrafficLightProtocolLevel = tostring(parse_json(AdditionalFields).TLPLevel)\n  | where TimeGenerated >= ago(ioc_lookBack)\n  | extend TI_ipEntity = NetworkSourceIP\n  | extend Url = iff(ObservableKey == \"url:value\", ObservableValue, \"\")\n  | summarize LatestIndicatorTime = arg_max(TimeGenerated, *) by Id, ObservableValue\n  | where IsActive and (ValidUntil > now() or isempty(ValidUntil))\n  | extend Description = tostring(parse_json(Data).description)\n  | where Description !contains_cs \"State: inactive;\" and Description !contains_cs \"State: falsepos;\");\nIP_Indicators\n   | project-reorder *, Tags, TrafficLightProtocolLevel, NetworkSourceIP, Type, TI_ipEntity\n// Use inner join\n| join kind=inner (OfficeActivity_) on $left.TI_ipEntity == $right.IPAddress\n// Filter out OfficeActivity events that occurred after the expiration of the corresponding indicator\n| where OfficeActivity_TimeGenerated < ValidUntil\n// Group the results by IndicatorId and UserId and determine scope of Office activities from the IPAddress\n| summarize OfficeActivity_TimeGenerated = arg_max(OfficeActivity_TimeGenerated, *), count_SharePoint=countif(OfficeWorkload == 'SharePoint'), count_OneDrive=countif(OfficeWorkload == 'OneDrive'), count_MicrosoftTeams=countif(OfficeWorkload == 'MicrosoftTeams'), count_Exchange=countif(OfficeWorkload == 'Exchange') by Id, tolower(UserId)\n// Select the desired output fields\n| extend Description = tostring(parse_json(Data).description)\n| extend ActivityGroupNames = extract(@\"ActivityGroup:(\\S+)\", 1, tostring(parse_json(Data).labels))\n| project OfficeActivity_TimeGenerated, Description, count_SharePoint, count_OneDrive, count_MicrosoftTeams, count_Exchange, Id, ValidUntil, Confidence, TI_ipEntity, ClientIP, IPAddress, TrafficLightProtocolLevel, UserId, ResultStatus,  NetworkSourceIP, Type\n| extend timestamp = OfficeActivity_TimeGenerated, Name = tostring(split(UserId, '@', 0)[0]), UPNSuffix = tostring(split(UserId, '@', 1)[0])",
+                "queryFrequency": "PT1H",
+                "queryPeriod": "P14D",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT5H",
+                "suppressionEnabled": false,
+                "startTimeUtc": null,
+                "tactics": [
+                    "Discovery",
+                    "Collection"
+                ],
+                "techniques": [],
+                "subTechniques": [],
+                "alertRuleTemplateName": null,
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": true,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "PT1H",
+                        "matchingMethod": "AllEntities",
+                        "groupByEntities": [],
+                        "groupByAlertDetails": [],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "SingleAlert"
+                },
+                "alertDetailsOverride": {
+                    "alertDisplayNameFormat": "[WASOC-Intelligence] Suspicious activity in OfficeActivity from known malicious IP address  {{IPAddress}}  related to phishing campaign",
+                    "alertDescriptionFormat": "This query maps any IP indicators of compromise (IOCs) related to phishing campaign from WASOC Threat Intelligence (TI), by searching for matches in OfficeActivity. Please check the count of activities within each scope, and verify the activities by searching the IP address.\n<br>\nTLP: {{TrafficLightProtocolLevel}} \n<br>\nIOC Description: {{Description}} \n<br>\nIOC Value: {{IPAddress}} ",
+                    "alertDynamicProperties": []
+                },
+                "customDetails": {
+                    "IPAddress": "IPAddress"
+                },
+                "entityMappings": [
+                    {
+                        "entityType": "Account",
+                        "fieldMappings": [
+                            {
+                                "identifier": "FullName",
+                                "columnName": "UserId"
+                            },
+                            {
+                                "identifier": "Name",
+                                "columnName": "Name"
+                            },
+                            {
+                                "identifier": "UPNSuffix",
+                                "columnName": "UPNSuffix"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "IP",
+                        "fieldMappings": [
+                            {
+                                "identifier": "Address",
+                                "columnName": "IPAddress"
+                            }
+                        ]
+                    }
+                ],
+                "sentinelEntitiesMappings": null,
+                "templateVersion": null
+            }
+        }
+    ]
+}

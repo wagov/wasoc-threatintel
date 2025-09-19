@@ -1,0 +1,126 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "workspace": {
+            "type": "String"
+        },
+	"ruleId": {
+      "type": "string",
+      "defaultValue": "[newGuid()]",
+      "metadata": {
+        "description": "The unique guid for this Analytics Rule"
+        }
+    }
+    },
+    "resources": [
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/', parameters('ruleId'))]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/', parameters('ruleId'))]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "Scheduled",
+            "apiVersion": "2023-12-01-preview",
+            "properties": {
+                "displayName": "[WASOC-Intelligence] a known phishing URL has been clicked by user - UrlClickEvents",
+                "description": "The rules detect URLClickEvents that matched URL Indicator of Compromise (IOC) from WASOC Threat Intelligence feed. Analyst should check if the clicked was allowed/ blocked. The URL clicked and matched URL TI needs to be further compared and investigated.",
+                "severity": "Medium",
+                "enabled": true,
+                "query": "//phishing-002\nlet dt_lookBack = 1h;\nlet ioc_lookBack = 14d;\nlet UrlClickEvents_ = UrlClickEvents\n    | where TimeGenerated >= ago(dt_lookBack)\n    | extend UrlClickEvents_TimeGenerated = TimeGenerated\n    | mv-expand todynamic(UrlChain)\n    | extend UrlChain = tolower(UrlChain)\n//URL parsing and processing\n    | extend UrlChain_parsed = parse_url(UrlChain)\n    | extend Url_host = tostring(UrlChain_parsed.Host), Url_path = tostring(UrlChain_parsed.Path)\n    | extend Url_path = iff(Url_path == \"/\" ,\"\",Url_path) //cleanse the url path\n    | summarize by NetworkMessageId, ReportId, UrlChain, UrlClickEvents_TimeGenerated, Url_host, Url_path, AccountUpn, Type, ActionType\n    ;\nlet TI = ThreatIntelIndicators\n//extract key part of kv pair\n| extend IndicatorType = replace(@\"\\[|\\]|\\\"\"\", \"\", tostring(split(ObservableKey, \":\", 0)))\n| where IndicatorType == \"url\"\n| extend Url = tolower(ObservableValue)\n  | extend TrafficLightProtocolLevel = tostring(parse_json(AdditionalFields).TLPLevel)\n  | where TimeGenerated >= ago(ioc_lookBack)\n//Use only WASOC-Government-ISAC feed\n  | where SourceSystem == \"WASOC-Government-ISAC\" and Tags contains \"phishing\"  \n  | summarize LatestIndicatorTime = arg_max(TimeGenerated, *) by Id, ObservableValue\n  | where IsActive and (ValidUntil > now() or isempty(ValidUntil))\n  | project-rename TI_Url = Url, TI_Type = Type\n//URL parsing and processing\n  | extend TI_Url_parsed = parse_url(TI_Url)\n    | extend TI_host = tostring(TI_Url_parsed.Host), TI_path = tostring(TI_Url_parsed.Path)\n    | extend TI_path = iff(TI_path == \"/\" ,\"\",TI_path) //cleanse the url path\n  ;\n//Join mechanism based on combination of host and path\nUrlClickEvents_\n| join kind=inner \n(\nTI\n) on $left.Url_host == $right.TI_host, $left.Url_path == $right.TI_path \n| where UrlClickEvents_TimeGenerated < ValidUntil\n| summarize UrlClickEvents_TimeGenerated = arg_max(UrlClickEvents_TimeGenerated, *) by Id\n| extend Description = tostring(parse_json(Data).description)\n| extend ActivityGroupNames = extract(@\"ActivityGroup:(\\S+)\", 1, tostring(parse_json(Data).labels))\n| project UrlClickEvents_TimeGenerated, AccountUpn, Description, ActivityGroupNames, Id, Type,ActionType, ValidUntil, Confidence, Url_Matched=TI_Url, Url_Clicked = UrlChain, NetworkMessageId,  ObservableValue, TrafficLightProtocolLevel\n| extend timestamp = UrlClickEvents_TimeGenerated\n| extend timestamp = UrlClickEvents_TimeGenerated, Name = tostring(split(AccountUpn, '@', 0)[0]), UPNSuffix = tostring(split(AccountUpn, '@', 1)[0])",
+                "queryFrequency": "PT1H",
+                "queryPeriod": "P14D",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT5H",
+                "suppressionEnabled": false,
+                "startTimeUtc": null,
+                "tactics": [
+                    "Execution"
+                ],
+                "techniques": [
+                    "T1204"
+                ],
+                "subTechniques": [
+                    "T1204.001"
+                ],
+                "alertRuleTemplateName": null,
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": true,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "P1D",
+                        "matchingMethod": "AllEntities",
+                        "groupByEntities": [
+                            "Account"
+                        ],
+                        "groupByAlertDetails": [
+                            "DisplayName"
+                        ],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "AlertPerResult"
+                },
+                "alertDetailsOverride": {
+                    "alertDisplayNameFormat": "[WASOC-Intelligence] a known phishing URL has been clicked by user - UrlClickEvents",
+                    "alertDescriptionFormat": "The rules detect URLClickEvents that matched URL Indicator of Compromise (IOC) from WASOC Threat Intelligence feed. Analyst should check if the clicked was allowed/ blocked. The URL clicked and matched URL TI needs to be further compared and investigated.\n<br>\nTLP: {{TrafficLightProtocolLevel}} \n<br>\nIOC Description: {{Description}} \n<br>\nIOC Value: {{ObservableValue}} ",
+                    "alertDynamicProperties": []
+                },
+                "customDetails": {},
+                "entityMappings": [
+                    {
+                        "entityType": "Account",
+                        "fieldMappings": [
+                            {
+                                "identifier": "FullName",
+                                "columnName": "AccountUpn"
+                            },
+                            {
+                                "identifier": "Name",
+                                "columnName": "Name"
+                            },
+                            {
+                                "identifier": "UPNSuffix",
+                                "columnName": "UPNSuffix"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "URL",
+                        "fieldMappings": [
+                            {
+                                "identifier": "Url",
+                                "columnName": "Url_Clicked"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "URL",
+                        "fieldMappings": [
+                            {
+                                "identifier": "Url",
+                                "columnName": "Url_Matched"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "MailMessage",
+                        "fieldMappings": [
+                            {
+                                "identifier": "NetworkMessageId",
+                                "columnName": "NetworkMessageId"
+                            },
+                            {
+                                "identifier": "Recipient",
+                                "columnName": "AccountUpn"
+                            }
+                        ]
+                    }
+                ],
+                "sentinelEntitiesMappings": null,
+                "templateVersion": null
+            }
+        }
+    ]
+}
