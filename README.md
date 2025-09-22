@@ -52,7 +52,7 @@ Ensure the details provided in the previous stage are all accurate and proceed t
 
 #### Step 3
 
-If the analytic rule has been successfully deployed, you will see the below screen. Click on the '**Go to Resource**' button to view the deployed analytic rule(s).
+If the analytic rule has been successfully deployed, you will see the below screen. Click on the '**Go to Resource**' button to view the deployed analytic rule(s). You can also navigate to the ***Analytics*** blade in the Microsoft Sentinel environment to confirm if the rules have successfully been deployed.
 
 ![page3](/media/Custom-Deployment-image3-step.jpeg)
 
