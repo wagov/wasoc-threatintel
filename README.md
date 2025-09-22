@@ -40,7 +40,7 @@ The following Analytic rules can be deployed to Microsoft Sentinel environment t
 </br>
 
 ### Analytic Rule Deployment guide
----
+___
 Click on the Deploy to Azure button on the table in '[Analytic Rules and deployments](#analytic-rules-for-detections-with-threat-intelligence)' and follow the below instructions for the deployment.
 
 <br>
