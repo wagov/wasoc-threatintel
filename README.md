@@ -9,8 +9,19 @@ This repository contains Threat Intelligence content from Western Australian Sec
 2) [Analytic Rule deployment guide](#analytic-rule-deployment-guide)
 
 
+<br>
+<!-- Empty line for styling -->
+</br>
+
+<br>
+<!-- Empty line for styling -->
+</br>
+
+<div align="center">
 
 ## Analytic Rules for detections with Threat Intelligence
+
+</div>
 
 The following Analytic rules can be deployed to Microsoft Sentinel environment to enable the detection of suspicious/potentially malicious activity based on Threat Intelligence shared by WASOC.
 
@@ -24,11 +35,17 @@ The following Analytic rules can be deployed to Microsoft Sentinel environment t
 | Phishing email potentially delivered to users mailbox | [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fwagov%2Fwasoc-threatintel%2Frefs%2Fheads%2Fmain%2Fanalytic-rules%2FWASOC-Intelligence-Phishing-email-potentially-delivered-to-user-mailbox.json) |
 | Detect inbound traffic from IP address(s) known (by WASOC) for active exploitation of vulnerabilities| [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fwagov%2Fwasoc-threatintel%2Frefs%2Fheads%2Fmain%2Fanalytic-rules%2FWASOC-Intelligence-Successful-inbound-traffic-to-AzureDiagnostics-from-ip-address-monitored-by-WA-SOC-known-to-actively-exploit-new-vulnerabilities.json) |
 
+<br>
+<!-- Empty line for styling -->
+</br>
 
 ### Analytic Rule Deployment guide
-
+---
 Click on the Deploy to Azure button on the table in '[Analytic Rules and deployments](#analytic-rules-for-detections-with-threat-intelligence)' and follow the below instructions for the deployment.
 
+<br>
+<!-- Empty line for styling -->
+</br>
 
 #### Step 1
 
@@ -42,6 +59,9 @@ Fill in the relevant details of the listed items as noted below.
 4. Provide your **Workspace Name** found under Log Analytics workspace settings
 5. Leave the newGuid() to generate a unique Rule Id for your rule
 
+<br>
+<!-- Empty line for styling -->
+</br>
 
 #### Step 2
 
@@ -49,6 +69,9 @@ Ensure the details provided in the previous stage are all accurate and proceed t
 
 ![page2](/media/Custom-Deployment-image2-steps.jpeg)
 
+<br>
+<!-- Empty line for styling -->
+</br>
 
 #### Step 3
 
