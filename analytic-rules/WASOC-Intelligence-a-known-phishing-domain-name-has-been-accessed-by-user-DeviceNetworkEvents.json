@@ -21,7 +21,7 @@
             "kind": "Scheduled",
             "apiVersion": "2023-12-01-preview",
             "properties": {
-                "displayName": "[WASOC-Intelligence] a known phishing domain-name {{ObservableValue}} has been accessed by user - DeviceNetworkEvents",
+                "displayName": "[WASOC-Intelligence] a known phishing domain-name has been accessed by user - DeviceNetworkEvents",
                 "description": "The rules detects potentially successful DeviceNetworkEvents connections to domains that match Indicators of Compromise (IOC) from WASOC Threat Intelligence feed.",
                 "severity": "High",
                 "enabled": true,
